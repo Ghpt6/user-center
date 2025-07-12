@@ -58,7 +58,8 @@ public class UserController {
     @GetMapping("/current")
     public BaseResponse<User> getCurrentUser(HttpServletRequest request) {
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        if (userObj instanceof User currentUser) {
+        if (userObj != null) {
+            User currentUser = (User) userObj;
             User userId = userService.getById(currentUser.getId());
             User safeUser = userService.getSafeUser(userId);
             return ResponseUtils.success(safeUser);
@@ -94,7 +95,8 @@ public class UserController {
     private boolean isAdmin(HttpServletRequest request) {
         //权限管理，仅管理员
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        if (userObj instanceof User user) {
+        if (userObj != null) {
+            User user = (User) userObj;
             return user.getUserRole() == ADMIN_ROLE;
         }
         return false;
