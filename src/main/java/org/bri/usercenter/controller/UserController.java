@@ -63,13 +63,13 @@ public class UserController {
             User safeUser = userService.getSafeUser(userId);
             return ResponseUtils.success(safeUser);
         }
-        return null;
+        return ResponseUtils.error(ErrorCode.NO_LOGIN_ERROR);
     }
 
     @GetMapping("/search")
     public BaseResponse<List<User>> searchUser(String username, HttpServletRequest request) {
         if (!isAdmin(request)) {
-            return null;
+            return ResponseUtils.error(ErrorCode.NO_AUTH_ERROR);
         }
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         //todo
