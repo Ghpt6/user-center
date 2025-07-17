@@ -45,8 +45,18 @@ public interface UserService extends IService<User> {
     public User getSafeUser(User originUser);
 
 
+    /**
+     * 使用sql来根据tag搜素用户
+     * @param tagList
+     * @return
+     */
     List<User> searchUserByTagsUsingSql(List<String> tagList);
 
+    /**
+     * 直接在内存里根据tag搜素用户
+     * @param tagList
+     * @return
+     */
     List<User> searchUserByTagsUsingMemory(List<String> tagList);
 
 }
