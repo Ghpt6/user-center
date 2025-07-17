@@ -5,8 +5,9 @@ import org.bri.usercenter.model.User;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.List;
 
 @SpringBootTest
 class UserServiceTest {
@@ -59,5 +60,18 @@ class UserServiceTest {
         checkPassword = "1234abcd";
         id = userService.register(userAccount, password, checkPassword);
         Assertions.assertTrue(id > 0);
+    }
+
+    @Test
+    void testSearchUserByTagsUsingSql() {
+        List<User> userList = userService.searchUserByTagsUsingSql(List.of("java", "spring"));
+        Assertions.assertNotNull(userList);
+        Assertions.assertEquals(1, userList.size());
+        Assertions.assertEquals("bridge", userList.get(0).getUsername());
+
+        userList = userService.searchUserByTagsUsingMemory(List.of("java", "spring"));
+        Assertions.assertNotNull(userList);
+        Assertions.assertEquals(1, userList.size());
+        Assertions.assertEquals("bridge", userList.get(0).getUsername());
     }
 }

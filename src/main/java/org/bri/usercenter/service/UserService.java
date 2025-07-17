@@ -4,6 +4,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.bri.usercenter.model.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.util.List;
+
 /**
  * @author ThinkPad
  * @description 针对表【user(用户)】的数据库操作Service
@@ -41,4 +43,10 @@ public interface UserService extends IService<User> {
      * @return 脱敏处理后的用户数据
      */
     public User getSafeUser(User originUser);
+
+
+    List<User> searchUserByTagsUsingSql(List<String> tagList);
+
+    List<User> searchUserByTagsUsingMemory(List<String> tagList);
+
 }

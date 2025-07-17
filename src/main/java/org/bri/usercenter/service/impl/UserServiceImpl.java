@@ -2,6 +2,8 @@ package org.bri.usercenter.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -12,18 +14,22 @@ import org.bri.usercenter.service.UserService;
 import org.bri.usercenter.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static org.bri.usercenter.constant.UserConstant.*;
 
 /**
  * @author ThinkPad
- * @description 针对表【user(用户)】的数据库操作Serviced的实现
- * @createDate 2025-07-02 22:57:06
+ * &#064;description  针对表【user(用户)】的数据库操作Serviced的实现
+ * &#064;createDate  2025-07-02 22:57:06
  */
 @Service
 @Slf4j
@@ -140,7 +146,51 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         safeUser.setCreateTime(originUser.getCreateTime());
 //        safeUser.setUpdateTime(new Date());
 //        safeUser.setIsDelete(0);
+        safeUser.setTags(originUser.getTags());
         return safeUser;
+    }
+
+    /**
+     * 根据标签搜索用户
+     *
+     * @param tagList 用户要拥有的标签
+     * @return
+     */
+    @Override
+    public List<User> searchUserByTagsUsingSql(List<String> tagList) {
+        if (CollectionUtils.isEmpty(tagList)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "tag为空");
+        }
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        for (String tag : tagList) {
+            queryWrapper = queryWrapper.like("tags", tag);
+        }
+        List<User> users = userMapper.selectList(queryWrapper);
+        // 2\
+        return users.stream().map(this::getSafeUser).toList();
+    }
+
+    @Override
+    public List<User> searchUserByTagsUsingMemory(List<String> tagList) {
+        if (CollectionUtils.isEmpty(tagList)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "tag为空");
+        }
+        // 查询所有
+        List<User> users = userMapper.selectList(null);
+
+        return users.stream().filter(user -> {
+            String tags = user.getTags();
+            Gson gson = new Gson();
+            Set<String> jsonTags = gson.fromJson(tags, new TypeToken<Set<String>>() {
+            }.getType());
+            if (CollectionUtils.isEmpty(jsonTags)) {return false;}
+            for (String tag : tagList) {
+                if (! jsonTags.contains(tag)) {
+                    return false;
+                }
+            }
+            return true;
+        }).map(this::getSafeUser).toList();
     }
 }
 

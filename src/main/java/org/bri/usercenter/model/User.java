@@ -79,4 +79,8 @@ public class User {
      * 0-普通用户， 1-管理员
      */
     private int userRole;
+    /**
+     * 用户标签列表,json格式
+     */
+    private String tags;
 }
