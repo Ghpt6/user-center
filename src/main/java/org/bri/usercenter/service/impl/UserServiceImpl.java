@@ -18,7 +18,9 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -183,6 +185,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             Gson gson = new Gson();
             Set<String> jsonTags = gson.fromJson(tags, new TypeToken<Set<String>>() {
             }.getType());
+            jsonTags = Optional.ofNullable(jsonTags).orElse(new HashSet<>());
             if (CollectionUtils.isEmpty(jsonTags)) {return false;}
             for (String tag : tagList) {
                 if (! jsonTags.contains(tag)) {
