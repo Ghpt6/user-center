@@ -11,6 +11,7 @@ import org.bri.usercenter.model.request.UserRegisterRequest;
 import org.bri.usercenter.service.UserService;
 import org.bri.usercenter.utils.ResponseUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,6 +26,7 @@ import static org.bri.usercenter.constant.UserConstant.USER_LOGIN_STATE;
  */
 @RestController
 @RequestMapping("/user")
+@CrossOrigin(originPatterns = {"http://localhost:*"})
 public class UserController {
     @Autowired
     private UserService userService;
@@ -67,7 +69,7 @@ public class UserController {
     }
 
     @GetMapping("/search")
-    public BaseResponse<List<User>> searchUser(String username, HttpServletRequest request) {
+    public BaseResponse<List<User>> searchUser(@RequestParam String username, HttpServletRequest request) {
         if (!isAdmin(request)) {
             return ResponseUtils.error(ErrorCode.NO_AUTH_ERROR);
         }
@@ -77,6 +79,15 @@ public class UserController {
         List<User> userList = userService.list(queryWrapper);
         List<User> collect = userList.stream().map(user -> userService.getSafeUser(user)).collect(Collectors.toList());
         return ResponseUtils.success(collect);
+    }
+
+    @GetMapping("/search/tags")
+    public BaseResponse<List<User>> searchUserTags(@RequestParam List<String> tagList, HttpServletRequest request) {
+        if(CollectionUtils.isEmpty(tagList)) {
+            return ResponseUtils.error(ErrorCode.PARAMS_ERROR);
+        }
+        List<User> users = userService.searchUserByTagsUsingMemory(tagList);
+        return ResponseUtils.success(users);
     }
 
     @PostMapping("/delete")
