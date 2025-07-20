@@ -1,13 +1,19 @@
 spring:
-    profiles:
+  profiles:
       active: dev
-    datasource:
+  datasource:
       driver-class-name: com.mysql.cj.jdbc.Driver
       url: jdbc:mysql://localhost:3306/uni
       username: sa
       password: 1234
-    session: # session失效时间
+  session: # session失效时间
       timeout: 86400
+  data:
+    redis:
+      port: 6379
+      host: localhost
+      database: 0
+      password: 123456
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: false
