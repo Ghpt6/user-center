@@ -10,6 +10,7 @@ public enum ErrorCode {
     SUCCESS(0, "ok", ""),
     PARAMS_ERROR(40000, "请求参数错误", ""),
     NULL_ERROR(40001, "请求数据为空", ""),
+    NO_USER_ERROR(40002, "请求用户不存在", ""),
     NO_AUTH_ERROR(40100, "无权限", ""),
     NO_LOGIN_ERROR(40101, "未登录", ""),
     SYSTEM_ERROR(50000, "系统异常", ""),
