@@ -44,6 +44,13 @@ public interface UserService extends IService<User> {
      */
     public User getSafeUser(User originUser);
 
+    /**
+     * 更新用户信息
+     *
+     * @param user
+     * @return
+     */
+    public Integer updateUser(User user, HttpServletRequest request);
 
     /**
      * 使用sql来根据tag搜素用户
@@ -59,4 +66,16 @@ public interface UserService extends IService<User> {
      */
     List<User> searchUserByTagsUsingMemory(List<String> tagList);
 
+    /**
+     * 获取当前登录用户信息
+     */
+    public User getCurLoginUser(HttpServletRequest request);
+
+    /**
+     * 当前登录用户是否是管理员
+     *
+     * @param request
+     * @return
+     */
+    public boolean isAdmin(HttpServletRequest request);
 }

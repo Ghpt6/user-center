@@ -73,7 +73,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         queryWrapper.eq("userAccount", userAccount);
         long count = userMapper.selectCount(queryWrapper);
         if (count > 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR,"已存在账户");
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "已存在账户");
         }
         //2.加密
         String encodedPassword = DigestUtils.md5DigestAsHex((salt + userPassword).getBytes(StandardCharsets.UTF_8));
@@ -131,7 +131,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public User getSafeUser(User originUser) {
-        if(originUser == null) {
+        if (originUser == null) {
             return null;
         }
         User safeUser = new User();
@@ -150,6 +150,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 //        safeUser.setIsDelete(0);
         safeUser.setTags(originUser.getTags());
         return safeUser;
+    }
+
+    @Override
+    public Integer updateUser(User user, HttpServletRequest request) {
+        // 只有管理员和用户自己能更改
+        if (!isAdmin(request) && getCurLoginUser(request).getId() != user.getId()) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+        }
+        User userToBeUpdate = userMapper.selectById(user.getId());
+        if (userToBeUpdate == null) {
+            throw new BusinessException(ErrorCode.NO_USER_ERROR);
+        }
+        return userMapper.updateById(user);
     }
 
     /**
@@ -186,14 +199,38 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             Set<String> jsonTags = gson.fromJson(tags, new TypeToken<Set<String>>() {
             }.getType());
             jsonTags = Optional.ofNullable(jsonTags).orElse(new HashSet<>());
-            if (CollectionUtils.isEmpty(jsonTags)) {return false;}
+            if (CollectionUtils.isEmpty(jsonTags)) {
+                return false;
+            }
             for (String tag : tagList) {
-                if (! jsonTags.contains(tag)) {
+                if (!jsonTags.contains(tag)) {
                     return false;
                 }
             }
             return true;
         }).map(this::getSafeUser).toList();
+    }
+
+    @Override
+    public User getCurLoginUser(HttpServletRequest request) {
+        if (request == null) {
+            throw new BusinessException(ErrorCode.NO_LOGIN_ERROR);
+        }
+        Object currentUser = request.getSession().getAttribute(USER_LOGIN_STATE);
+        if (currentUser instanceof User cur) {
+            return cur;
+        }
+        throw new BusinessException(ErrorCode.NO_LOGIN_ERROR);
+    }
+
+    @Override
+    public boolean isAdmin(HttpServletRequest request) {
+        //权限管理，仅管理员
+        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        if (userObj instanceof User user) {
+            return user.getUserRole() == ADMIN_ROLE;
+        }
+        return false;
     }
 }
 

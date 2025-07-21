@@ -70,7 +70,7 @@ public class UserController {
 
     @GetMapping("/search")
     public BaseResponse<List<User>> searchUser(@RequestParam String username, HttpServletRequest request) {
-        if (!isAdmin(request)) {
+        if (!userService.isAdmin(request)) {
             return ResponseUtils.error(ErrorCode.NO_AUTH_ERROR);
         }
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
@@ -83,11 +83,20 @@ public class UserController {
 
     @GetMapping("/search/tags")
     public BaseResponse<List<User>> searchUserTags(@RequestParam List<String> tagList, HttpServletRequest request) {
-        if(CollectionUtils.isEmpty(tagList)) {
+        if (CollectionUtils.isEmpty(tagList)) {
             return ResponseUtils.error(ErrorCode.PARAMS_ERROR);
         }
         List<User> users = userService.searchUserByTagsUsingMemory(tagList);
         return ResponseUtils.success(users);
+    }
+
+    @PostMapping("/update")
+    public BaseResponse<Integer> updateUser(@RequestBody User user, HttpServletRequest request) {
+        if (user == null) {
+            return ResponseUtils.error(ErrorCode.PARAMS_ERROR);
+        }
+        Integer id = userService.updateUser(user, request);
+        return ResponseUtils.success(id);
     }
 
     @PostMapping("/delete")
@@ -95,19 +104,11 @@ public class UserController {
         if (id <= 0) {
             return ResponseUtils.error(ErrorCode.PARAMS_ERROR);
         }
-        if (!isAdmin(request)) {
+        if (!userService.isAdmin(request)) {
             return ResponseUtils.error(ErrorCode.NO_AUTH_ERROR);
         }
         Boolean removed = userService.removeById(id);
         return ResponseUtils.success(removed);
     }
 
-    private boolean isAdmin(HttpServletRequest request) {
-        //权限管理，仅管理员
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        if (userObj instanceof User user) {
-            return user.getUserRole() == ADMIN_ROLE;
-        }
-        return false;
-    }
 }
