@@ -6,8 +6,6 @@ spring:
       url: jdbc:mysql://localhost:3306/uni
       username: sa
       password: 1234
-  session: # session失效时间
-      timeout: 86400
   data:
     redis:
       port: 6379
@@ -27,6 +25,8 @@ server:
   port: 8080
   servlet:
     context-path: "/api"
+    session:
+      timeout: 120m
 knife4j:
   enable: true
 # springdoc-openapi项目配置

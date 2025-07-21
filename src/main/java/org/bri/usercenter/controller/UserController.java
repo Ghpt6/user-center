@@ -59,13 +59,9 @@ public class UserController {
 
     @GetMapping("/current")
     public BaseResponse<User> getCurrentUser(HttpServletRequest request) {
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        if (userObj instanceof User currentUser) {
-            User userId = userService.getById(currentUser.getId());
-            User safeUser = userService.getSafeUser(userId);
-            return ResponseUtils.success(safeUser);
-        }
-        return ResponseUtils.error(ErrorCode.NO_LOGIN_ERROR);
+        User loginUser = userService.getCurLoginUser(request);
+        User safeUser = userService.getSafeUser(loginUser);
+        return ResponseUtils.success(safeUser);
     }
 
     @GetMapping("/search")
@@ -97,6 +93,14 @@ public class UserController {
         }
         Integer id = userService.updateUser(user, request);
         return ResponseUtils.success(id);
+    }
+
+    @GetMapping("/recommend")
+    public BaseResponse<List<User>> getRecommendations(HttpServletRequest request) {
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        List<User> userList = userService.list(queryWrapper);
+        List<User> safeUserList = userList.stream().map(user -> userService.getSafeUser(user)).toList();
+        return ResponseUtils.success(safeUserList);
     }
 
     @PostMapping("/delete")
