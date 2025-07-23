@@ -24,7 +24,7 @@ public class InsertUsers {
      * 批量插入用户
      * 插入10万条数据花费时间30-40秒
      */
-    @Scheduled(initialDelay = 1000)
+//    @Scheduled(initialDelay = 1000)
     public void insertUsers() {
         log.info("Inserting Users...");
         StopWatch stopWatch = new StopWatch();

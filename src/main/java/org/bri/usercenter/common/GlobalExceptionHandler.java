@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
  * 全局异常处理
  */
 @Slf4j
-//@RestControllerAdvice
+@RestControllerAdvice
 public class GlobalExceptionHandler {
     @ExceptionHandler
     public BaseResponse businessExceptionHandler(BusinessException e) {
