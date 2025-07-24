@@ -158,8 +158,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (!isAdmin(request) && getCurLoginUser(request).getId() != user.getId()) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
-        User userToBeUpdate = userMapper.selectById(user.getId());
-        if (userToBeUpdate == null) {
+        User originalUser = userMapper.selectById(user.getId());
+        if (originalUser == null) {
             throw new BusinessException(ErrorCode.NO_USER_ERROR);
         }
         return userMapper.updateById(user);
@@ -218,7 +218,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
         Object currentUser = request.getSession().getAttribute(USER_LOGIN_STATE);
         if (currentUser instanceof User cur) {
-            return cur;
+            long userId = cur.getId();
+            User user = userMapper.selectById(userId);
+            request.getSession().setAttribute(USER_LOGIN_STATE, user);
+            return user;
         }
         throw new BusinessException(ErrorCode.NO_LOGIN_ERROR);
     }
