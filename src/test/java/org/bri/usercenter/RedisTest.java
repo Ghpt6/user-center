@@ -1,6 +1,6 @@
 package org.bri.usercenter;
 
-import org.bri.usercenter.model.User;
+import org.bri.usercenter.model.domain.User;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
-import org.bri.usercenter.model.User;
+import org.bri.usercenter.model.domain.User;
 import org.bri.usercenter.service.UserService;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;

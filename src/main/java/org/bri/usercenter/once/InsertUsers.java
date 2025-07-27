@@ -1,16 +1,13 @@
 package org.bri.usercenter.once;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.*;
 
 import lombok.extern.slf4j.Slf4j;
-import org.bri.usercenter.mapper.UserMapper;
-import org.bri.usercenter.model.User;
+import org.bri.usercenter.model.domain.User;
 import org.bri.usercenter.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 

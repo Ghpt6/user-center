@@ -1,7 +1,7 @@
 package org.bri.usercenter.service;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.bri.usercenter.model.User;
+import org.bri.usercenter.model.domain.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.List;

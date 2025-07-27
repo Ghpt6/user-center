@@ -1,7 +1,7 @@
 package org.bri.usercenter.service;
 
 import jakarta.annotation.Resource;
-import org.bri.usercenter.model.User;
+import org.bri.usercenter.model.domain.User;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;

@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.bri.usercenter.common.ErrorCode;
 import org.bri.usercenter.common.BusinessException;
-import org.bri.usercenter.model.User;
+import org.bri.usercenter.model.domain.User;
 import org.bri.usercenter.service.UserService;
 import org.bri.usercenter.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +24,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static org.bri.usercenter.constant.UserConstant.*;
 

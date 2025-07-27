@@ -7,7 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.bri.usercenter.common.BaseResponse;
 import org.bri.usercenter.common.ErrorCode;
 import org.bri.usercenter.common.BusinessException;
-import org.bri.usercenter.model.User;
+import org.bri.usercenter.model.domain.User;
 import org.bri.usercenter.model.request.UserLoginRequest;
 import org.bri.usercenter.model.request.UserRegisterRequest;
 import org.bri.usercenter.service.UserService;
@@ -20,9 +20,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import static org.bri.usercenter.constant.UserConstant.ADMIN_ROLE;
-import static org.bri.usercenter.constant.UserConstant.USER_LOGIN_STATE;
 
 
 /**
