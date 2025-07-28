@@ -67,7 +67,7 @@ public interface UserService extends IService<User> {
     List<User> searchUserByTagsUsingMemory(List<String> tagList);
 
     /**
-     * 获取当前登录用户信息
+     * 获取当前登录用户信息,未登录自动会抛出异常
      */
     public User getCurLoginUser(HttpServletRequest request);
 
