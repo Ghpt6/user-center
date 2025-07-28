@@ -2,10 +2,13 @@ package org.bri.usercenter.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import jakarta.servlet.http.HttpServletRequest;
 import org.bri.usercenter.common.BaseResponse;
 import org.bri.usercenter.common.BusinessException;
 import org.bri.usercenter.common.ErrorCode;
+import org.bri.usercenter.common.PageRequest;
 import org.bri.usercenter.model.domain.Team;
+import org.bri.usercenter.model.dto.TeamAddRequest;
 import org.bri.usercenter.model.dto.TeamQuery;
 import org.bri.usercenter.service.TeamService;
 import org.bri.usercenter.service.UserService;
@@ -26,15 +29,14 @@ public class TeamController {
     private TeamService teamService;
 
     @PostMapping("/add")
-    public BaseResponse<Long> addTeam(@RequestBody Team team) {
-        if (team == null) {
+    public BaseResponse<Long> addTeam(@RequestBody TeamAddRequest teamAddRequest, HttpServletRequest request) {
+        if (teamAddRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        boolean saved = teamService.save(team);
-        if (!saved) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "添加失败");
-        }
-        return ResponseUtils.success(team.getId());
+        Team team = new Team();
+        BeanUtils.copyProperties(teamAddRequest, team);
+        long addedTeam = teamService.addTeam(team, request);
+        return ResponseUtils.success(addedTeam);
     }
 
     @PostMapping("/delete")
@@ -74,16 +76,29 @@ public class TeamController {
     }
 
     @GetMapping("/list")
-    public BaseResponse<List<Team>> listTeam(@RequestParam TeamQuery teamQuery) {
+    public BaseResponse<List<Team>> listTeam(TeamQuery teamQuery) {
+        if (teamQuery == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        Team team = new Team();
+        BeanUtils.copyProperties(teamQuery, team);
+        QueryWrapper<Team> teamQueryWrapper = new QueryWrapper<>(team);
+
+        List<Team> teamList = teamService.list(teamQueryWrapper);
+        return ResponseUtils.success(teamList);
+    }
+
+
+    @GetMapping("/list/page")
+    public BaseResponse<Page<Team>> listTeamByPage(PageRequest pageRequest, TeamQuery teamQuery) {
         if (teamQuery == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         Team team = new Team();
         BeanUtils.copyProperties(teamQuery, team);
         QueryWrapper<Team> teamQueryWrapper = new QueryWrapper<Team>(team);
-
-        List<Team> teamList = teamService.list(teamQueryWrapper);
+        Page<Team> page = new Page<>(pageRequest.getCurPage(), pageRequest.getPageSize());
+        Page<Team> teamList = teamService.page(page, teamQueryWrapper);
         return ResponseUtils.success(teamList);
     }
-
 }
