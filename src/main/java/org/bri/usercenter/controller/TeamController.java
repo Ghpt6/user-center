@@ -6,10 +6,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.bri.usercenter.common.BaseResponse;
 import org.bri.usercenter.common.BusinessException;
 import org.bri.usercenter.common.ErrorCode;
-import org.bri.usercenter.common.PageRequest;
 import org.bri.usercenter.model.domain.Team;
-import org.bri.usercenter.model.dto.TeamAddRequest;
+import org.bri.usercenter.model.request.TeamAddRequest;
 import org.bri.usercenter.model.dto.TeamQuery;
+import org.bri.usercenter.model.request.TeamUpdateRequest;
+import org.bri.usercenter.model.vo.TeamUserVO;
 import org.bri.usercenter.service.TeamService;
 import org.bri.usercenter.service.UserService;
 import org.bri.usercenter.utils.ResponseUtils;
@@ -52,15 +53,15 @@ public class TeamController {
     }
 
     @PostMapping("/update")
-    public BaseResponse<Long> updateTeam(@RequestBody Team team) {
-        if (team == null) {
+    public BaseResponse<Boolean> updateTeam(@RequestBody TeamUpdateRequest teamUpdateRequest, HttpServletRequest request) {
+        if (teamUpdateRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        boolean updated = teamService.updateById(team);
+        boolean updated = teamService.updateTeam(teamUpdateRequest, request);
         if (!updated) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "更新失败");
         }
-        return ResponseUtils.success(team.getId());
+        return ResponseUtils.success(true);
     }
 
     @GetMapping("/get")
@@ -76,28 +77,24 @@ public class TeamController {
     }
 
     @GetMapping("/list")
-    public BaseResponse<List<Team>> listTeam(TeamQuery teamQuery) {
+    public BaseResponse<List<TeamUserVO>> listTeam(TeamQuery teamQuery, HttpServletRequest request) {
         if (teamQuery == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        Team team = new Team();
-        BeanUtils.copyProperties(teamQuery, team);
-        QueryWrapper<Team> teamQueryWrapper = new QueryWrapper<>(team);
-
-        List<Team> teamList = teamService.list(teamQueryWrapper);
+        List<TeamUserVO> teamList = teamService.listTeams(teamQuery, request);
         return ResponseUtils.success(teamList);
     }
 
 
     @GetMapping("/list/page")
-    public BaseResponse<Page<Team>> listTeamByPage(PageRequest pageRequest, TeamQuery teamQuery) {
+    public BaseResponse<Page<Team>> listTeamByPage(TeamQuery teamQuery) {
         if (teamQuery == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         Team team = new Team();
         BeanUtils.copyProperties(teamQuery, team);
         QueryWrapper<Team> teamQueryWrapper = new QueryWrapper<Team>(team);
-        Page<Team> page = new Page<>(pageRequest.getCurPage(), pageRequest.getPageSize());
+        Page<Team> page = new Page<>(teamQuery.getCurPage(), teamQuery.getPageSize());
         Page<Team> teamList = teamService.page(page, teamQueryWrapper);
         return ResponseUtils.success(teamList);
     }

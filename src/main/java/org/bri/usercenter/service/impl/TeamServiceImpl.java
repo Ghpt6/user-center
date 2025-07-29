@@ -3,32 +3,41 @@ package org.bri.usercenter.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.Data;
+import org.apache.commons.lang3.time.DateUtils;
 import org.bri.usercenter.common.BusinessException;
 import org.bri.usercenter.common.ErrorCode;
+import org.bri.usercenter.constant.UserConstant;
 import org.bri.usercenter.model.domain.Team;
 import org.bri.usercenter.model.domain.User;
 import org.bri.usercenter.model.domain.UserTeam;
+import org.bri.usercenter.model.dto.TeamQuery;
 import org.bri.usercenter.model.enums.TeamStatusEnum;
+import org.bri.usercenter.model.request.TeamUpdateRequest;
+import org.bri.usercenter.model.vo.TeamUserVO;
+import org.bri.usercenter.model.vo.UserVO;
 import org.bri.usercenter.service.TeamService;
 import org.bri.usercenter.mapper.TeamMapper;
 import org.bri.usercenter.service.UserService;
 import org.bri.usercenter.service.UserTeamService;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 /**
-* @author ThinkPad
-* @description 针对表【team(队伍表)】的数据库操作Service实现
-* @createDate 2025-07-25 14:59:16
-*/
+ * @author ThinkPad
+ * @description 针对表【team(队伍表)】的数据库操作Service实现
+ * @createDate 2025-07-25 14:59:16
+ */
 @Service
 public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
-    implements TeamService {
+        implements TeamService {
     @Autowired
     private UserService userService;
 
@@ -38,7 +47,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
     @Override
     @Transactional(rollbackFor = BusinessException.class)
     public long addTeam(Team team, HttpServletRequest request) {
-        if(team == null) {
+        if (team == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "team is null");
         }
         // 当前登录用户
@@ -51,31 +60,31 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         }
         // 名称长度<=30
         String teamName = team.getName();
-        if(teamName.isBlank() || teamName.length() > 30) {
+        if (teamName.isBlank() || teamName.length() > 30) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍名称错误");
         }
 
         // 描述<=1024
         String description = team.getDescription();
-        if( ! description.isBlank() && description.length() > 1024) {
+        if (!description.isBlank() && description.length() > 1024) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "描述<=1024");
         }
 
         int status = Optional.ofNullable(team.getStatus()).orElse(0);
 
         TeamStatusEnum enumByStatus = TeamStatusEnum.getEnumByStatus(status);
-        if(enumByStatus == null) {
+        if (enumByStatus == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "param status error");
         }
 
         // 加密判断
         String password = team.getPassword();
-        if(enumByStatus.equals(TeamStatusEnum.ENCRYPTED) && password.isBlank() || password.length() > 32) {
+        if (enumByStatus.equals(TeamStatusEnum.ENCRYPTED) && password.isBlank() || password.length() > 32) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "param password error");
         }
 
         Date expireTime = team.getExpireTime();
-        if(expireTime == null || expireTime.before(new Date())) {
+        if (expireTime == null || expireTime.before(new Date())) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "时间错乱");
         }
 
@@ -83,7 +92,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         qw.eq("founderId", loginUser.getId());
         team.setFounderId(loginUser.getId()); // 防止恶意修改创建人id
         long hasTeamNum = this.count(qw);
-        if(hasTeamNum >= 5) {
+        if (hasTeamNum >= 5) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍创建太多");
         }
 
@@ -91,7 +100,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         team.setId(null);
         boolean saved = this.save(team);
         Long teamId = team.getId();
-        if(!saved || teamId == null) {
+        if (!saved || teamId == null) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "队伍创建失败");
         }
 
@@ -101,6 +110,97 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         userTeam.setJoinTime(new Date());
         userTeamService.save(userTeam);
         return teamId;
+    }
+
+    @Override
+    public List<TeamUserVO> listTeams(TeamQuery teamQuery, HttpServletRequest request) {
+        QueryWrapper<Team> teamQueryWrapper = new QueryWrapper<>();
+        if (teamQuery != null) {
+            String name = teamQuery.getName();
+            if (name != null && !name.isBlank()) {
+                teamQueryWrapper.like("name", name);
+            }
+
+            String description = teamQuery.getDescription();
+            if (description != null && !description.isBlank()) {
+                teamQueryWrapper.like("description", description);
+            }
+
+            String searchTeam = teamQuery.getSearchTerm();
+            if (searchTeam != null && !searchTeam.isBlank()) {
+                // 名称或描述中包含关键词
+                teamQueryWrapper.and(qw -> qw.like("name", searchTeam).or().like("description", searchTeam));
+            }
+
+            Integer maxNum = teamQuery.getMaxNum();
+            // 小于等于
+            if (maxNum != null && maxNum > 0) {
+                teamQueryWrapper.le("maxNum", maxNum);
+            }
+
+            Integer status = teamQuery.getStatus();
+            TeamStatusEnum statusEnum = TeamStatusEnum.getEnumByStatus(status);
+            statusEnum = statusEnum == null ? TeamStatusEnum.PUBLIC : statusEnum; // 默认查询公开
+            // 私密的队伍 且 查询用户不为管理员 不能查询
+            if (statusEnum.equals(TeamStatusEnum.PRIVATE) && !userService.isAdmin(request)) {
+                throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+            } else {
+                teamQueryWrapper.eq("status", statusEnum.getStatus());
+            }
+
+            Long founderId = teamQuery.getFounderId();
+            if (founderId != null && founderId > 0) {
+                teamQueryWrapper.eq("founderId", founderId);
+            }
+        }
+        teamQueryWrapper.and(qw -> qw.isNull("expireTime").or().ge("expireTime", new Date()));
+        // 查询到队伍列表结果
+        List<Team> teamList = this.list(teamQueryWrapper);
+        if (CollectionUtils.isEmpty(teamList)) {
+            return new ArrayList<>();
+        }
+        List<TeamUserVO> teamUserVOList = new ArrayList<>();
+        // 关联查询
+        for (Team team : teamList) {
+            Long founderId = team.getFounderId();
+            User founder = userService.getById(founderId);
+            if (founder != null) {
+                UserVO userVO = new UserVO();
+                BeanUtils.copyProperties(founder, userVO);
+
+                TeamUserVO teamUserVO = new TeamUserVO();
+                BeanUtils.copyProperties(team, teamUserVO);
+                teamUserVO.setFounderUser(userVO);
+                teamUserVOList.add(teamUserVO);
+            }
+        }
+        return teamUserVOList;
+    }
+
+    @Override
+    public boolean updateTeam(TeamUpdateRequest teamUpdateRequest, HttpServletRequest request) {
+        if (teamUpdateRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数为空");
+        }
+
+        Long id = teamUpdateRequest.getId();
+        if (id == null || id <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍id错误");
+        }
+        Team oldTeam = this.getById(id);
+        if (oldTeam == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR);
+        }
+
+        // 只有管理员和创建人可以修改
+        if (!userService.isAdmin(request) || userService.getCurLoginUser(request).getId() != oldTeam.getFounderId()) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+        }
+
+        // continue 7-29.19:00:00
+        Team newTeam = new Team();
+        updateById();
+        return false;
     }
 }
 
