@@ -9,6 +9,7 @@ import org.bri.usercenter.common.ErrorCode;
 import org.bri.usercenter.model.domain.Team;
 import org.bri.usercenter.model.request.TeamAddRequest;
 import org.bri.usercenter.model.dto.TeamQuery;
+import org.bri.usercenter.model.request.TeamJoinRequest;
 import org.bri.usercenter.model.request.TeamUpdateRequest;
 import org.bri.usercenter.model.vo.TeamUserVO;
 import org.bri.usercenter.service.TeamService;
@@ -97,5 +98,17 @@ public class TeamController {
         Page<Team> page = new Page<>(teamQuery.getCurPage(), teamQuery.getPageSize());
         Page<Team> teamList = teamService.page(page, teamQueryWrapper);
         return ResponseUtils.success(teamList);
+    }
+
+    @PostMapping("/join")
+    public BaseResponse<Boolean> joinTeam(@RequestBody TeamJoinRequest teamJoinRequest, HttpServletRequest request) {
+        if (teamJoinRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        boolean joined = teamService.joinTeam(teamJoinRequest, request);
+        if (!joined) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "加入失败");
+        }
+        return ResponseUtils.success(true);
     }
 }

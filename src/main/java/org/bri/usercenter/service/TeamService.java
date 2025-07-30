@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.bri.usercenter.model.domain.Team;
 import com.baomidou.mybatisplus.extension.service.IService;
 import org.bri.usercenter.model.dto.TeamQuery;
+import org.bri.usercenter.model.request.TeamJoinRequest;
 import org.bri.usercenter.model.request.TeamUpdateRequest;
 import org.bri.usercenter.model.vo.TeamUserVO;
 
@@ -40,4 +41,12 @@ public interface TeamService extends IService<Team> {
      * @return
      */
     boolean updateTeam(TeamUpdateRequest teamUpdateRequest, HttpServletRequest request);
+
+    /**
+     * 加入队伍
+     * @param teamJoinRequest
+     * @param request
+     * @return
+     */
+    boolean joinTeam(TeamJoinRequest teamJoinRequest, HttpServletRequest request);
 }
