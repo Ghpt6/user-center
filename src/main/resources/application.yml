@@ -45,3 +45,4 @@ springdoc:
       packages-to-scan: org.bri.usercenter.controller   #配置要扫描包的路径,一般配置到启动类所在的包名
     - group: 'admin-api'
       paths-to-match: '/**'
+  default-flat-param-object: true
