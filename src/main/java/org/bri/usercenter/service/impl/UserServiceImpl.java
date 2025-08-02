@@ -10,18 +10,17 @@ import org.apache.commons.lang3.StringUtils;
 import org.bri.usercenter.common.ErrorCode;
 import org.bri.usercenter.common.BusinessException;
 import org.bri.usercenter.model.domain.User;
+import org.bri.usercenter.model.vo.UserVO;
 import org.bri.usercenter.service.UserService;
 import org.bri.usercenter.mapper.UserMapper;
+import org.bri.usercenter.utils.EditDistance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -233,6 +232,39 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return user.getUserRole() == ADMIN_ROLE;
         }
         return false;
+    }
+
+    @Override
+    public List<User> getMatchUsers(Integer num, HttpServletRequest request) {
+        User loginUser = getCurLoginUser(request);
+        Gson gson = new Gson();
+        List<String> loginUserTags = gson.fromJson(loginUser.getTags(), new TypeToken<List<String>>() {
+        });
+
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.isNotNull("tags");
+        queryWrapper.select("id", "tags"); // 只查询id，tags字段 34s -> 7s
+        List<User> userList = this.list(queryWrapper);// 全部数据
+
+        // <userList的下标, distance>
+        SortedMap<Integer, Integer> indexDistanceMap = new TreeMap<>();
+        for (int i = 0; i < userList.size(); i++) {
+            User user = userList.get(i);
+            List<String> userTags = gson.fromJson(user.getTags(), new TypeToken<List<String>>() {
+            });
+            // 标签为空 or 为用户自己
+            if (CollectionUtils.isEmpty(userTags) || user.getId() == loginUser.getId()) {
+                continue;
+            }
+
+            int minDistance = EditDistance.minDistance(loginUserTags, userTags);
+            indexDistanceMap.put(i, minDistance); // 存放所有编辑距离
+        }
+        List<Integer> topIndex = indexDistanceMap.keySet().stream().limit(num).toList();
+        List<User> list = topIndex.stream().map(index -> {
+            return userList.get(index);
+        }).toList();
+        return list;
     }
 }
 

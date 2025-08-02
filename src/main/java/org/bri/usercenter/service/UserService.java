@@ -3,6 +3,7 @@ package org.bri.usercenter.service;
 import jakarta.servlet.http.HttpServletRequest;
 import org.bri.usercenter.model.domain.User;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.bri.usercenter.model.vo.UserVO;
 
 import java.util.List;
 
@@ -78,4 +79,12 @@ public interface UserService extends IService<User> {
      * @return
      */
     public boolean isAdmin(HttpServletRequest request);
+
+    /**
+     * 推荐相似用户
+     * @param num
+     * @param request
+     * @return
+     */
+    List<User> getMatchUsers(Integer num, HttpServletRequest request);
 }

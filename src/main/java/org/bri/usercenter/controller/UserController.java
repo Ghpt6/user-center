@@ -10,11 +10,13 @@ import org.bri.usercenter.common.BusinessException;
 import org.bri.usercenter.model.domain.User;
 import org.bri.usercenter.model.request.UserLoginRequest;
 import org.bri.usercenter.model.request.UserRegisterRequest;
+import org.bri.usercenter.model.vo.UserVO;
 import org.bri.usercenter.service.UserService;
 import org.bri.usercenter.utils.ResponseUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.NumberUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -96,6 +98,22 @@ public class UserController {
         }
         Integer id = userService.updateUser(user, request);
         return ResponseUtils.success(id);
+    }
+
+    /**
+     * 推荐最相似的用户
+     *
+     * @param num 推荐数量
+     * @param request
+     * @return
+     */
+    @GetMapping("/match")
+    public BaseResponse<List<User>> getMatchUsers(@RequestParam Integer num, HttpServletRequest request) {
+        if(num == null || num <= 0 || num > 10) {
+            return ResponseUtils.error(ErrorCode.PARAMS_ERROR);
+        }
+        List<User> userList = userService.getMatchUsers(num, request);
+        return ResponseUtils.success(userList);
     }
 
     /**
