@@ -8,6 +8,7 @@ import lombok.EqualsAndHashCode;
 import org.bri.usercenter.common.PageRequest;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * 队伍请求包装类
@@ -18,6 +19,11 @@ public class TeamQuery extends PageRequest {
 
 
     private Long id;
+
+    /**
+     * id列表，查询包含其中的队伍
+     */
+    private List<Long> idList;
 
     /**
      * 队伍名称

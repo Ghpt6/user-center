@@ -26,13 +26,14 @@ public interface TeamService extends IService<Team> {
     long addTeam(Team team, HttpServletRequest request);
 
     /**
-     * 搜索队伍
+     * 搜索队伍。对于私密的队伍只有管理员可以查询到， 或者指定allowPrivate参数为true
      *
      * @param teamQuery 队伍信息
      * @param request
+     * @param allowPrivate 允许查询私密的队伍
      * @return
      */
-    List<TeamUserVO> listTeams(TeamQuery teamQuery, HttpServletRequest request);
+    List<TeamUserVO> listTeams(TeamQuery teamQuery, HttpServletRequest request, boolean allowPrivate);
 
     /**
      * 更新队伍信息
@@ -49,4 +50,20 @@ public interface TeamService extends IService<Team> {
      * @return
      */
     boolean joinTeam(TeamJoinRequest teamJoinRequest, HttpServletRequest request);
+
+    /**
+     * 退出队伍
+     * @param teamId
+     * @param request
+     * @return
+     */
+    Boolean exitTeam(Long teamId, HttpServletRequest request);
+
+    /**
+     * 解散队伍
+     * @param teamId
+     * @param request
+     * @return
+     */
+    boolean deleteTeam(Long teamId, HttpServletRequest request);
 }

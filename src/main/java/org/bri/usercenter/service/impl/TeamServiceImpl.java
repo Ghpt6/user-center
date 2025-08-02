@@ -4,10 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.time.DateUtils;
 import org.bri.usercenter.common.BusinessException;
 import org.bri.usercenter.common.ErrorCode;
-import org.bri.usercenter.constant.UserConstant;
 import org.bri.usercenter.model.domain.Team;
 import org.bri.usercenter.model.domain.User;
 import org.bri.usercenter.model.domain.UserTeam;
@@ -47,7 +45,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
     private UserTeamService userTeamService;
 
     @Override
-    @Transactional(rollbackFor = BusinessException.class)
+    @Transactional(rollbackFor = Exception.class)
     public long addTeam(Team team, HttpServletRequest request) {
         if (team == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "team is null");
@@ -115,12 +113,17 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
     }
 
     @Override
-    public List<TeamUserVO> listTeams(TeamQuery teamQuery, HttpServletRequest request) {
+    public List<TeamUserVO> listTeams(TeamQuery teamQuery, HttpServletRequest request, boolean allowPrivate) {
         QueryWrapper<Team> teamQueryWrapper = new QueryWrapper<>();
         if (teamQuery != null) {
             Long id = teamQuery.getId();
             if (id != null && id > 0) {
                 teamQueryWrapper.eq("id", id);
+            }
+
+            List<Long> idList = teamQuery.getIdList();
+            if (!CollectionUtils.isEmpty(idList)) {
+                teamQueryWrapper.in("id", idList);
             }
 
             String name = teamQuery.getName();
@@ -148,11 +151,15 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             Integer status = teamQuery.getStatus();
             TeamStatusEnum statusEnum = TeamStatusEnum.getEnumByStatus(status);
             statusEnum = statusEnum == null ? TeamStatusEnum.PUBLIC : statusEnum; // 默认查询公开
-            // 私密的队伍 且 查询用户不为管理员 不能查询
+            // 队伍是私密的 且 查询用户不是管理员  - 全部满足会报错
             if (statusEnum.equals(TeamStatusEnum.PRIVATE) && !userService.isAdmin(request)) {
                 throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
             } else {
-                teamQueryWrapper.eq("status", statusEnum.getStatus());
+                if (allowPrivate) {
+                    // 全部允许
+                } else {
+                    teamQueryWrapper.eq("status", statusEnum.getStatus());
+                }
             }
 
             Long founderId = teamQuery.getFounderId();
@@ -185,19 +192,14 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean updateTeam(TeamUpdateRequest teamUpdateRequest, HttpServletRequest request) {
         if (teamUpdateRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数为空");
         }
 
         Long id = teamUpdateRequest.getId();
-        if (id == null || id <= 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍id错误");
-        }
-        Team oldTeam = this.getById(id);
-        if (oldTeam == null) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "队伍不存在");
-        }
+        Team oldTeam = getTeamById(id);
 
         // 只有管理员和创建人可以修改
         if (!userService.isAdmin(request) && userService.getCurLoginUser(request).getId() != oldTeam.getFounderId()) {
@@ -222,6 +224,7 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean joinTeam(TeamJoinRequest teamJoinRequest, HttpServletRequest request) {
         if (teamJoinRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
@@ -237,19 +240,12 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         }
 
         Long teamId = teamJoinRequest.getTeamId();
-        if(teamId == null || teamId <= 0) {
-            throw new BusinessException(ErrorCode.NULL_ERROR, "队伍不存在");
-        }
-        Team team = this.getById(teamId);
-        if (team == null) {
-            throw new BusinessException(ErrorCode.NULL_ERROR);
-        }
-        if(team.getExpireTime() != null && team.getExpireTime().before(new Date())) {
+        Team team = getTeamById(teamId);
+
+        if (team.getExpireTime() != null && team.getExpireTime().before(new Date())) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍过期");
         }
-        userTeamQueryWrapper.clear();
-        userTeamQueryWrapper.eq("teamId", teamId);
-        long teamMembers = userTeamService.count(userTeamQueryWrapper);
+        long teamMembers = getTeamMembers(teamId);
         if (teamMembers >= team.getMaxNum()) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "队伍人数已满");
         }
@@ -280,6 +276,101 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
         userTeam.setJoinTime(new Date());
 
         return userTeamService.save(userTeam);
+    }
+
+    /**
+     * 获取队伍当前人数
+     *
+     * @param teamId 队伍id
+     * @return 队伍人数
+     */
+    private long getTeamMembers(Long teamId) {
+        if (teamId == null || teamId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        QueryWrapper<UserTeam> userTeamQueryWrapper = new QueryWrapper<>();
+        userTeamQueryWrapper.eq("teamId", teamId);
+        return userTeamService.count(userTeamQueryWrapper);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Boolean exitTeam(Long teamId, HttpServletRequest request) {
+        Team team = getTeamById(teamId);
+
+        User loginUser = userService.getCurLoginUser(request);
+        Long userId = loginUser.getId();
+        QueryWrapper<UserTeam> userTeamQueryWrapper = new QueryWrapper<>();
+        userTeamQueryWrapper.eq("teamId", teamId);
+        userTeamQueryWrapper.eq("userId", userId);
+        long userCountInTeam = userTeamService.count(userTeamQueryWrapper);
+        if (userCountInTeam == 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "未加入队伍");
+        }
+
+        long teamMembers = getTeamMembers(teamId);
+        // 队伍只剩一人，直接解散
+        if (teamMembers == 1) {
+            boolean removed = userTeamService.remove(userTeamQueryWrapper);
+            boolean removed1 = this.removeById(teamId);
+            return removed && removed1;
+        } else {
+            // 创建人退出，约定更改创建人
+            if (team.getFounderId().equals(userId)) {
+                QueryWrapper<UserTeam> userTeamQueryWrapper2 = new QueryWrapper<>();
+                userTeamQueryWrapper2.eq("teamId", teamId);
+                userTeamQueryWrapper2.last("order by id asc limit 2");
+                List<UserTeam> userTeamList = userTeamService.list(userTeamQueryWrapper2);
+                UserTeam nextUserTeam = userTeamList.get(1);
+                Long newFounderId = nextUserTeam.getUserId();
+
+                Team newTeam = new Team();
+                newTeam.setId(teamId);
+                newTeam.setFounderId(newFounderId);
+                boolean updated = this.updateById(newTeam);
+                boolean removed = userTeamService.remove(userTeamQueryWrapper);
+                return updated && removed;
+            } else {
+                return userTeamService.remove(userTeamQueryWrapper);
+            }
+        }
+    }
+
+    /**
+     * 根据id从数据库中获取队伍，不存在自动抛出异常
+     *
+     * @param teamId 队伍id，会自动检查是否符合要求
+     * @return
+     */
+    private Team getTeamById(Long teamId) {
+        if (teamId == null || teamId <= 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "team id 异常");
+        }
+
+        Team team = this.getById(teamId);
+        if (team == null) {
+            throw new BusinessException(ErrorCode.NULL_ERROR, "不存在队伍");
+        }
+        return team;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteTeam(Long teamId, HttpServletRequest request) {
+        Team team = getTeamById(teamId);
+
+        User loginUser = userService.getCurLoginUser(request);
+        // 是否是队伍创建人
+        if (!team.getFounderId().equals(loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
+        }
+
+        QueryWrapper<UserTeam> userTeamQueryWrapper = new QueryWrapper<>();
+        userTeamQueryWrapper.eq("teamId", teamId);
+        boolean removed = userTeamService.remove(userTeamQueryWrapper);
+
+        boolean removed1 = removeById(teamId);
+        return removed && removed1;
     }
 }
 
