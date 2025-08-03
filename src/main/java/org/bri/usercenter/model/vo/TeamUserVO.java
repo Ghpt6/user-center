@@ -59,4 +59,11 @@ public class TeamUserVO {
      * 队伍的创建人信息
      */
     private UserVO founderUser;
+
+    /**
+     * 当前登录用户已加入该队伍？
+     */
+    private Boolean hasJoined;
+
+    private Integer joinCount;
 }

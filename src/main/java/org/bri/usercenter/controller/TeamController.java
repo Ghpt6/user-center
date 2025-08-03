@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -101,6 +102,31 @@ public class TeamController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         List<TeamUserVO> teamList = teamService.listTeams(teamQuery, request, false);
+
+        // 登录用户是否加入队伍
+        List<Long> teamIdList = teamList.stream().map(TeamUserVO::getId).toList();
+        User loginUser = userService.getCurLoginUser(request);
+        QueryWrapper<UserTeam> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("userId", loginUser.getId());
+        queryWrapper.in("teamId", teamIdList);
+        List<UserTeam> userTeamList = userTeamService.list(queryWrapper);
+
+        List<Long> userHasJoinedTeamIdList = userTeamList.stream().map(UserTeam::getTeamId).toList();
+        teamList.forEach(teamUserVO -> {
+            if (userHasJoinedTeamIdList.contains(teamUserVO.getId())) {
+                teamUserVO.setHasJoined(true);
+            }
+        });
+
+        // 计算每个队伍的加入队伍人数
+        QueryWrapper<UserTeam> queryWrapper2 = new QueryWrapper<>();
+        queryWrapper2.in("teamId", teamIdList);
+        List<UserTeam> userTeamList2 = userTeamService.list(queryWrapper2);
+        Map<Long, List<UserTeam>> teamIdMap = userTeamList2.stream().collect(Collectors.groupingBy(UserTeam::getTeamId));
+        teamList.forEach(teamUserVO -> {
+            teamUserVO.setJoinCount(teamIdMap.getOrDefault(teamUserVO.getId(), List.of()).size());
+        });
+
         return ResponseUtils.success(teamList);
     }
 
