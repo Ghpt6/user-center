@@ -15,6 +15,7 @@ import org.bri.usercenter.service.UserService;
 import org.bri.usercenter.mapper.UserMapper;
 import org.bri.usercenter.utils.EditDistance;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
@@ -23,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static org.bri.usercenter.constant.UserConstant.*;
 
@@ -226,6 +228,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public boolean isAdmin(HttpServletRequest request) {
+        if (request == null) {
+            throw new BusinessException(ErrorCode.NO_LOGIN_ERROR);
+        }
         //权限管理，仅管理员
         Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
         if (userObj instanceof User user) {
@@ -247,7 +252,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         List<User> userList = this.list(queryWrapper);// 全部数据
 
         // <userList的下标, distance>
-        SortedMap<Integer, Integer> indexDistanceMap = new TreeMap<>();
+        List<Pair<User, Integer>> userPairList = new ArrayList<>();
         for (int i = 0; i < userList.size(); i++) {
             User user = userList.get(i);
             List<String> userTags = gson.fromJson(user.getTags(), new TypeToken<List<String>>() {
@@ -258,13 +263,27 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             }
 
             int minDistance = EditDistance.minDistance(loginUserTags, userTags);
-            indexDistanceMap.put(i, minDistance); // 存放所有编辑距离
+            userPairList.add(Pair.of(user, minDistance)); // 存放所有编辑距离
         }
-        List<Integer> topIndex = indexDistanceMap.keySet().stream().limit(num).toList();
-        List<User> list = topIndex.stream().map(index -> {
-            return userList.get(index);
-        }).toList();
-        return list;
+        // 按distance由小到大排序
+        List<Long> idList = userPairList.stream()
+                .sorted((a, b) -> a.getSecond() - b.getSecond())
+                .limit(num)
+                .map(pair -> pair.getFirst().getId())
+                .toList();
+
+        QueryWrapper<User> userQueryWrapper = new QueryWrapper<>();
+        userQueryWrapper.in("id", idList);
+        Map<Long, List<User>> userIdToUserMap = userMapper.selectList(userQueryWrapper).stream()
+                .map(this::getSafeUser)
+                .collect(Collectors.groupingBy(u -> u.getId()));
+
+        List<User> orderUserList = new ArrayList<>();
+        for (long id : idList) {
+            orderUserList.add(userIdToUserMap.get(id).get(0));
+        }
+
+        return orderUserList;
     }
 }
 
